@@ -1,6 +1,7 @@
 import sqlite3
 import os
 from datetime import datetime
+from datetime import date
 
 #Global entities
 DB_PATH ="pocketpolice.db"
@@ -11,6 +12,8 @@ config_dict = {
     "penalty":"",
     "deadline":""
 }
+tasks_list = []
+transactions_list = []
 
 #To check if it's the first time opening the app
 def first_time(DB_PATH):
@@ -92,6 +95,10 @@ def first_time_setup(DB_PATH):
 #To load necessary data when starting up
 def load_data(DB_PATH):
 
+    #declaring them as global objects to avoid local copies
+    global tasks_list
+    global transactions_list
+
     #Get the config values from the db
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
@@ -99,13 +106,27 @@ def load_data(DB_PATH):
     c.execute('''
             SELECT * FROM config
     ''')
-    row = c.fetchall()
+    row = c.fetchone()
     config_dict["monthly_budget"] = row[1]
     config_dict["per_task_earning"] = row[2]
     config_dict["bonus"] = row[3]
     config_dict["penalty"] = row[4]
     config_dict["deadline"] = row[5]
-    
+
+    today = date.today().isoformat() #----->isoformat required to get text object instead of a date object
+
+    tasks_query = """SELECT * FROM tasks WHERE task_date = (?)"""
+    c.execute(tasks_query, (today,)) #----> the comma after today is apparently important here to make this a tuple :)
+
+    output = c.fetchall()
+    tasks_list = [list(row) for row in output]
+
+    transactions_query = """SELECT * FROM transactions"""
+    c.execute(transactions_query)
+
+    output = c.fetchall()
+    transactions_list = [list(row) for row in output]
+
     conn.commit()
     conn.close()
     
